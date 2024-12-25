@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "fastai_course22p2"
+  site-url: "https://HasanGoni.github.io/fastai_course22p2"
+  description: "Practice fastai course 2022 p2"
+  repo-branch: main
+  repo-url: "https://github.com/HasanGoni/fastai_course22p2"
