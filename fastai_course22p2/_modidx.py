@@ -5,4 +5,5 @@ d = { 'settings': { 'branch': 'main',
                 'doc_host': 'https://HasanGoni.github.io',
                 'git_url': 'https://github.com/HasanGoni/fastai_course22p2',
                 'lib_path': 'fastai_course22p2'},
-  'syms': {'fastai_course22p2.core': {'fastai_course22p2.core.foo': ('core.html#foo', 'fastai_course22p2/core.py')}}}
+  'syms': { 'fastai_course22p2.core': {'fastai_course22p2.core.foo': ('core.html#foo', 'fastai_course22p2/core.py')},
+            'fastai_course22p2.preprocessing.lesson15': {}}}
