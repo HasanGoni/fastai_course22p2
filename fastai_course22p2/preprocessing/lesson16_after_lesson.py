@@ -122,6 +122,20 @@ def to_cpu(x):
 # %% ../../nbs/03_preprocessing.lesson_16_after_lesson.ipynb 13
 class Callback:
 	order = 0
+	_fwd = 'model', 'opt','batch', 'epoch'
+
+	def __getattr__(self, name):
+		if name in self._fwd: 
+			return getattr(self.learn,name)
+		raise AttributeError(name)
+
+	def __setattr__(self, name, value):
+		if name in self._fwd: warn(f'Setting {name} in a callback,Did you mean to set learn.{name}`?')
+		super().__setattr__(name, value)
+
+	@property
+	def training(self): return self.model.training
+
 
 # %% ../../nbs/03_preprocessing.lesson_16_after_lesson.ipynb 14
 class TrainCB(Callback):
