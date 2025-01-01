@@ -289,6 +289,9 @@ class LRFinderCB(Callback):
         if loss > self.min*3: raise CancelFitException()
         for g in learn.opt.param_groups: g['lr'] *= self.lr_mult
 
+# %% ../../nbs/03_preprocessing.lesson_16_after_lesson.ipynb 35
+from torch.optim.lr_scheduler import ExponentialLR 
+
 # %% ../../nbs/03_preprocessing.lesson_16_after_lesson.ipynb 36
 class LRFinderCB(Callback):
     def __init__(self, gamma=1.3, max_mult=3): store_attr()
