@@ -4,7 +4,7 @@
 
 # %% auto 0
 __all__ = ['def_device', 'device', 'norm', 'clean_ipython_hist', 'clean_tb', 'clean_mem', 'transformi', 'get_model',
-           'init_weights', 'BatchTransformCB']
+           'init_weights', 'BatchTransformCB', 'prep_data_n', 'GeneralRelu', 'plot_func', 'conv_relu', 'get_model_']
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 3
 from cv_tools.core import *
@@ -13,6 +13,8 @@ from fastcore.all import *
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 4
 import sys, traceback, gc
+import matplotlib.pyplot as plt
+from datasets import load_dataset
 
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 5
@@ -110,3 +112,64 @@ def _norm(batch):
 	return (batch[0] - xmean ) / xstd, batch[1]
 
 norm = BatchTransformCB(_norm)
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 56
+def prep_data_n():
+	dsd = load_dataset('fashion_mnist')
+	tds = dsd.with_transform(transformi_n)
+	dls = DataLoaders.from_dd(tds, batch_size=1024, num_workers=0)
+
+	return dls
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 60
+class GeneralRelu(nn.Module):
+	def __init__(self, leak=None, sub=None, maxv=None): 
+		super().__init__()
+		store_attr()
+	def forward(self, x):
+		x = F.leaky_relu(x, self.leak) if self.leak else F.relu(x)
+		if self.sub: x -= self.sub
+		if self.maxv: x = x.clamp_max(self.maxv)
+		return x
+
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 61
+def plot_func(f, start=-5, end=5, n=100):
+	x = torch.linspace(start, end, n)
+	y = f(x)
+	plt.plot(x, y)
+	plt.grid(True, which='both', ls='--')
+	plt.axhline(0, color='k', linewidth=0.7)
+	plt.axvline(0, color='k', linewidth=0.7)
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 63
+def conv_relu(ni, nf, ks=3, stride=2,act=nn.ReLU ):
+	res = nn.Conv2d(
+			ni, 
+			nf, 
+			kernel_size=ks, 
+			stride=stride, 
+			padding=ks//2)
+	if act: res = nn.Sequential(res, act())
+	return res
+
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 64
+def get_model_(act=nn.ReLU, nfs=None):
+	if nfs is None: nfs = [1, 8, 16, 32, 64]
+	layers = [conv_relu(nfs[i], nfs[i+1], act=act) for i in range(len(nfs)-1)]
+	return nn.Sequential(*layers, conv_relu(nfs[-1], 10, act=False), nn.Flatten()
+					  ).to(def_device)
+
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 65
+def init_weights(m, leaky=None):
+	if isinstance(m, (nn.Conv2d, nn.Conv1d, nn.Conv3d)):
+		nn.init.kaiming_normal_(m.weight,a=leaky)
+
+
