@@ -4,7 +4,8 @@
 
 # %% auto 0
 __all__ = ['def_device', 'device', 'norm', 'clean_ipython_hist', 'clean_tb', 'clean_mem', 'transformi', 'get_model',
-           'init_weights', 'BatchTransformCB', 'prep_data_n', 'GeneralRelu', 'plot_func', 'conv_relu', 'get_model_']
+           'init_weights', 'BatchTransformCB', 'prep_data_n', 'GeneralRelu', 'plot_func', 'conv_relu', 'get_model_',
+           'lsuv_init', 'conv_norm', 'get_model_norm', 'LayerNorm', 'BatchNorm']
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 3
 from cv_tools.core import *
@@ -68,14 +69,15 @@ from fastai_course22p2.preprocessing.lesson16_second_part import *
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 14
 @inplace
-def transformi(b): b['image'] = TF.to_tensor(b['image'])
+def transformi(b): b['image'] = [TF.to_tensor(o) for o in b['image']] 
 
-
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 17
-def_device = 'cuda' if torch.cuda.is_available() else 'cpu'
-device = def_device
 
 # %% ../../nbs/05_preprocessing.lesson_17.ipynb 18
+def_device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = def_device
+device
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 19
 def get_model():
 	return nn.Sequential(
 		conv(1, 8), 
@@ -86,17 +88,17 @@ def get_model():
 		nn.Flatten()).to(device)
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 27
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 28
 from math import sqrt
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 40
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 41
 def init_weights(m):
 	if isinstance(m, (nn.Conv2d, nn.Conv1d, nn.Conv3d)):
 		nn.init.kaiming_normal_(m.weight)
 		
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 49
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 50
 class BatchTransformCB(Callback):
 	def __init__(
 			self, tfm,
@@ -107,13 +109,13 @@ class BatchTransformCB(Callback):
 		if (self.on_train and learn.training) or (self.on_val and not learn.training):
 			learn.batch = self.tfm(learn.batch)
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 50
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 51
 def _norm(batch):
 	return (batch[0] - xmean ) / xstd, batch[1]
 
 norm = BatchTransformCB(_norm)
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 56
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 58
 def prep_data_n():
 	dsd = load_dataset('fashion_mnist')
 	tds = dsd.with_transform(transformi_n)
@@ -122,7 +124,7 @@ def prep_data_n():
 	return dls
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 60
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 62
 class GeneralRelu(nn.Module):
 	def __init__(self, leak=None, sub=None, maxv=None): 
 		super().__init__()
@@ -135,7 +137,7 @@ class GeneralRelu(nn.Module):
 
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 61
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 63
 def plot_func(f, start=-5, end=5, n=100):
 	x = torch.linspace(start, end, n)
 	y = f(x)
@@ -145,7 +147,7 @@ def plot_func(f, start=-5, end=5, n=100):
 	plt.axvline(0, color='k', linewidth=0.7)
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 63
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 65
 def conv_relu(ni, nf, ks=3, stride=2,act=nn.ReLU ):
 	res = nn.Conv2d(
 			ni, 
@@ -158,7 +160,7 @@ def conv_relu(ni, nf, ks=3, stride=2,act=nn.ReLU ):
 
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 64
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 66
 def get_model_(act=nn.ReLU, nfs=None):
 	if nfs is None: nfs = [1, 8, 16, 32, 64]
 	layers = [conv_relu(nfs[i], nfs[i+1], act=act) for i in range(len(nfs)-1)]
@@ -167,9 +169,101 @@ def get_model_(act=nn.ReLU, nfs=None):
 
 
 
-# %% ../../nbs/05_preprocessing.lesson_17.ipynb 65
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 67
 def init_weights(m, leaky=None):
 	if isinstance(m, (nn.Conv2d, nn.Conv1d, nn.Conv3d)):
 		nn.init.kaiming_normal_(m.weight,a=leaky)
 
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 74
+def _lsuv_stats(hook, m, inp, out):
+    acts = to_cpu(out)
+    hook.mean = acts.mean()
+    hook.std = acts.std()
+
+def lsuv_init(model,m, m_in, xb):
+    h = Hook(m, _lsuv_stats)
+    with torch.no_grad():
+        while model(xb) is not None and (abs(h.std -1) > 1e-3 or abs(h.mean) > 1e-3):
+            m_in.bias -= h.mean
+            m_in.weight.data /= h.std
+    h.remove()
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 83
+def conv_norm(ni, nf, ks=3, stride=2, act=nn.ReLU, norm=None, bias=None):
+    if bias is None: bias = not isinstance(norm, (nn.BatchNorm2d, nn.BatchNorm1d,nn.BatchNorm3d))
+    layers = [nn.Conv2d(ni, nf, kernel_size=ks, stride=stride, padding=ks//2, bias=bias)]
+    if norm: layers.append(norm(nf))
+    if act: layers.append(act())
+    return nn.Sequential(*layers)
+
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 84
+def get_model_norm(
+    act=nn.ReLU,
+    nfs=None,
+    norm=None
+):
+    if nfs is None: nfs = [1, 8, 16, 32, 64]
+    layers = [conv_norm(nfs[i], nfs[i+1], act=act, norm=norm) for i in range(len(nfs)-1)]
+    return nn.Sequential(*layers, conv_norm(nfs[-1], 10, act=False), nn.Flatten()).to(def_device)
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 85
+class LayerNorm(nn.Module):
+    def __init__(self, dummy,eps=1e-5): 
+        super().__init__()
+        store_attr()
+        self.mult = nn.Parameter(torch.tensor(1.))
+        self.add = nn.Parameter(torch.tensor(0.))
+
+    def forward(self, x):
+        m = x.mean((1, 2, 3), keepdim=True)
+        s = x.std((1, 2, 3), keepdim=True)
+        x = (x - m) / (s + self.eps).sqrt()
+        return x * self.mult + self.add
+
+
+# %% ../../nbs/05_preprocessing.lesson_17.ipynb 89
+class BatchNorm(nn.Module):
+    def __init__(self, nf, mom=0.1, eps=1e-5):
+        # Initialize parent nn.Module class
+        super().__init__()
+        # Store all arguments as attributes using fastai's store_attr
+        store_attr()
+        # Small constant for numerical stability when normalizing
+        self.eps = eps
+        # Learnable scale parameter initialized to ones, one per feature
+        self.mult = nn.Parameter(torch.ones(nf, 1, 1))
+        # Learnable bias parameter initialized to zeros, one per feature  
+        self.add = nn.Parameter(torch.zeros(nf, 1, 1))
+        # Register running variance buffer initialized to ones
+        # Shape is (1, num_features, 1, 1) for proper broadcasting
+        self.register_buffer('vars', torch.ones(1, nf, 1, 1))
+        # Register running mean buffer initialized to zeros
+        # Shape is (1, num_features, 1, 1) for proper broadcasting
+        self.register_buffer('means', torch.zeros(1, nf, 1, 1))
+
+    def update_stats(self, x):
+        # Calculate mean across batch (dim 0), height (dim 2) and width (dim 3) dimensions, keeping dims for broadcasting
+        m = x.mean((0,2,3), keepdim=True)
+        # Calculate variance across same dimensions as mean
+        v = x.var((0,2,3), keepdim=True)
+        # Update running mean using momentum - lerp_ does inplace linear interpolation: means = (1-mom)*means + mom*m
+        self.means.lerp_(m, self.mom)
+        # Update running variance using same momentum factor
+        self.vars.lerp_(v, self.mom)
+        return m, v
+
+    def forward(self, x):
+        if self.training:
+            with torch.no_grad():
+                m, v = self.update_stats(x)
+        else:
+            m, v = self.means, self.vars
+        x = (x - m) / (v + self.eps).sqrt()
+        return x * self.mult + self.add
 
