@@ -356,4 +356,5 @@ d = { 'settings': { 'branch': 'main',
                                                           'fastai_course22p2.preprocessing.lesson17.prep_data_n': ( 'preprocessing.lesson_17.html#prep_data_n',
                                                                                                                     'fastai_course22p2/preprocessing/lesson17.py'),
                                                           'fastai_course22p2.preprocessing.lesson17.transformi': ( 'preprocessing.lesson_17.html#transformi',
-                                                                                                                   'fastai_course22p2/preprocessing/lesson17.py')}}}
+                                                                                                                   'fastai_course22p2/preprocessing/lesson17.py')},
+            'fastai_course22p2.preprocessing.lesson_23': {}}}
