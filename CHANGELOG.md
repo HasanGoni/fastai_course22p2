@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropout regularization
 - Custom activation function support (default: GELU)
 - Flexible kernel size configuration (default: 5x5 for initial block)
+- Project roadmap and TODO list
+
+### Planned
+- Enhanced U-Net with ResBlocks and fastai tricks:
+  - Progressive resizing
+  - Self-attention layers
+  - Advanced activation functions
+  - Modern training techniques
+- Segmentation model integration
+- Diffusion-based image generation
+- Comprehensive metrics and evaluation
+- Model optimization and deployment
 
 ### Technical Details
 - Model Architecture:
@@ -44,5 +56,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Jupyter notebooks with detailed explanations
 - Code comments following fastai documentation style
 - Implementation details and architecture choices explained
+- Added comprehensive TODO list with project roadmap
 
-[Unreleased]: https://github.com/hasangoni/fastai_course22p2/tree/master
+## [0.1.0] - 2024-03-30
+### Added
+- Initial project setup
+- Basic U-Net implementation
+- Core super-resolution functionality
+- Basic training pipeline
+- Initial documentation
+
+[Unreleased]: https://github.com/hasangoni/fastai_course22p2/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hasangoni/fastai_course22p2/releases/tag/v0.1.0
